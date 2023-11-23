@@ -3,8 +3,12 @@ package db
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -16,6 +20,34 @@ type DB struct {
 	db        *mongo.Collection
 }
 
+type Message struct {
+	ID          primitive.ObjectID `bson:"_id"`
+	MessageID   string             `bson:"message_id"`
+	MessageBody string             `bson:"message_body"`
+}
+
+func ConnectToDb() *mongo.Client {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+	uri := os.Getenv("MONGODB_URI")
+	if uri == "" {
+		log.Fatal("You must set your 'MONGODB_URI' environment variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
+	}
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
+	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
+func DisconnectFromDb(client *mongo.Client) {
+	if err := client.Disconnect(context.TODO()); err != nil {
+		panic(err)
+	}
+	fmt.Print("Disconnected!\n")
+}
+
 func NewDB(client *mongo.Client, dbName string, tableName string) (dbObj *DB) {
 	dbObj = new(DB) // mora da se rezervise mem za obj
 	dbObj.ctx = context.TODO()
@@ -25,13 +57,37 @@ func NewDB(client *mongo.Client, dbName string, tableName string) (dbObj *DB) {
 	return
 }
 
-func (dbObj *DB) FindOne(filter interface{}, opts ...*options.FindOneOptions) (result bson.M, err error) {
+func (dbObj *DB) FindOne(filter interface{}, opts ...*options.FindOneOptions) (result Message, err error) {
 	err = dbObj.db.FindOne(dbObj.ctx, filter, opts...).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		fmt.Print("No document was found with this filter!\n", err)
 		return
 	}
 	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (dbObj *DB) Find(filter interface{}, opts ...*options.FindOptions) (results []Message, err error) {
+	cursor, err := dbObj.db.Find(dbObj.ctx, filter, opts...)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (dbObj *DB) FindAll(opts ...*options.FindOptions) (results []Message, err error) {
+	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{}, opts...)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = cursor.All(context.TODO(), &results); err != nil {
 		panic(err)
 	}
 	return
