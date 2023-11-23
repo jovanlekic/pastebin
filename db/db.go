@@ -55,8 +55,8 @@ func NewDB(client *mongo.Client, dbName string, tableName string) (dbObj *DB) {
 	return
 }
 
-func (dbObj *DB) FindOne(filter interface{}, opts ...*options.FindOneOptions) (result Message, err error) {
-	err = dbObj.db.FindOne(dbObj.ctx, filter, opts...).Decode(&result)
+func (dbObj *DB) FindOne(filter interface{}) (result Message, err error) {
+	err = dbObj.db.FindOne(dbObj.ctx, filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		fmt.Print("No document was found with this filter!\n", err)
 		return
@@ -67,8 +67,8 @@ func (dbObj *DB) FindOne(filter interface{}, opts ...*options.FindOneOptions) (r
 	return
 }
 
-func (dbObj *DB) Find(filter interface{}, opts ...*options.FindOptions) (results []Message, err error) {
-	cursor, err := dbObj.db.Find(dbObj.ctx, filter, opts...)
+func (dbObj *DB) Find(filter interface{}) (results []Message, err error) {
+	cursor, err := dbObj.db.Find(dbObj.ctx, filter)
 	if err != nil {
 		panic(err)
 	}
@@ -79,8 +79,8 @@ func (dbObj *DB) Find(filter interface{}, opts ...*options.FindOptions) (results
 	return
 }
 
-func (dbObj *DB) FindAll(opts ...*options.FindOptions) (results []Message, err error) {
-	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{}, opts...)
+func (dbObj *DB) FindAll() (results []Message, err error) {
+	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{})
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +92,7 @@ func (dbObj *DB) FindAll(opts ...*options.FindOptions) (results []Message, err e
 }
 
 func (dbObj *DB) InsertOne(newMessage Message) (err error) {
-	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage)
+	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage, &options.InsertOneOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,6 +103,22 @@ func (dbObj *DB) InsertMany(messages []interface{}) (err error) {
 	_, err = dbObj.db.InsertMany(dbObj.ctx, messages)
 	if err != nil {
 		log.Fatal(err)
+	}
+	return
+}
+
+func (dbObj *DB) DeleteOne(filter interface{}) (err error) {
+	_, err = dbObj.db.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (dbObj *DB) DeleteMany(filter interface{}) (err error) {
+	_, err = dbObj.db.DeleteMany(context.TODO(), filter)
+	if err != nil {
+		panic(err)
 	}
 	return
 }
