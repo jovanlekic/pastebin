@@ -8,7 +8,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -21,9 +20,8 @@ type DB struct {
 }
 
 type Message struct {
-	ID          primitive.ObjectID `bson:"_id"`
-	MessageID   string             `bson:"message_id"`
-	MessageBody string             `bson:"message_body"`
+	MessageID   string `bson:"message_id"`
+	MessageBody string `bson:"message_body"`
 }
 
 func ConnectToDb() *mongo.Client {
@@ -89,6 +87,22 @@ func (dbObj *DB) FindAll(opts ...*options.FindOptions) (results []Message, err e
 
 	if err = cursor.All(context.TODO(), &results); err != nil {
 		panic(err)
+	}
+	return
+}
+
+func (dbObj *DB) InsertOne(newMessage Message) (err error) {
+	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
+func (dbObj *DB) InsertMany(messages []interface{}) (err error) {
+	_, err = dbObj.db.InsertMany(dbObj.ctx, messages)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return
 }

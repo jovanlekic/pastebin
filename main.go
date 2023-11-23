@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"pastebin/db"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func main() {
@@ -34,16 +32,23 @@ func main() {
 	// 	panic(err)
 	// }
 
-	// results, err := dbObj.FindAll(nil)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	newMessage := db.Message{
+		MessageID:   "7",
+		MessageBody: "New message content",
+	}
 
-	filter := bson.M{"message_id": bson.M{"$in": []string{"1", "2"}}}
-	results, err := dbObj.Find(filter, nil)
+	dbObj.InsertOne(newMessage)
+
+	results, err := dbObj.FindAll(nil)
 	if err != nil {
 		panic(err)
 	}
+
+	// filter := bson.M{"message_id": bson.M{"$in": []string{"1", "2"}}}
+	// results, err := dbObj.Find(filter, nil)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	for _, result := range results {
 		fmt.Printf("%s\n", result) // ispis u json-u
