@@ -5,10 +5,27 @@ import (
 )
 
 func main() {
-	client := db.ConnectToDb()
-	defer db.DisconnectFromDb(client)
+	mongoClient := db.ConnectToMongoDb()
+	defer db.DisconnectFromMongoDb(mongoClient)
 
+	postgresClient := db.ConnectToPostgresDb()
+	defer db.DisconnectFromPostgresDb(postgresClient)
 	//IGRANJE SA DB
+
+	// rows, err := postgresClient.Query("SELECT * FROM Users;")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// for rows.Next() {
+	// 	var d int
+	// 	var id []uint8
+	// 	var a, b, c, e string
+	// 	err := rows.Scan(&id, &a, &b, &d, &c, &e)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	fmt.Print(id, " ", a, " ", b, " ", c, " ", d, " ", e, "\n")
+	// }
 
 	// dbObj := db.NewDB(client, "sample_mflix", "movies")
 
@@ -22,7 +39,7 @@ func main() {
 	// 	panic(err)
 	// }
 
-	dbObj := db.NewDB(client, "sample_message", "messages")
+	// dbObj := db.NewDB(client, "sample_message", "messages")
 
 	// filter := bson.D{{Key: "message_id", Value: "1"}}
 

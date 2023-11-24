@@ -24,7 +24,7 @@ type Message struct {
 	MessageBody string `bson:"message_body"`
 }
 
-func ConnectToDb() *mongo.Client {
+func ConnectToMongoDb() *mongo.Client {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
@@ -39,7 +39,7 @@ func ConnectToDb() *mongo.Client {
 	return client
 }
 
-func DisconnectFromDb(client *mongo.Client) {
+func DisconnectFromMongoDb(client *mongo.Client) {
 	if err := client.Disconnect(context.TODO()); err != nil {
 		panic(err)
 	}
