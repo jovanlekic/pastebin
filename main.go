@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"pastebin/db"
 )
 
@@ -18,7 +17,7 @@ func main() {
 	// filter := bson.D{{Key: "title", Value: title}}
 
 	// // FindOne - vraca prvi document kome je title = "Back to the Future"
-	// result, err := dbObj.FindOne(filter, nil) // kako bi kod koji koristimo bio sto prostiji napravicu wrapper oko najcescih db poziva
+	// result, err := dbObj.FindOne(filter) // kako bi kod koji koristimo bio sto prostiji napravicu wrapper oko najcescih db poziva
 	// if err != nil {
 	// 	panic(err)
 	// }
@@ -27,22 +26,29 @@ func main() {
 
 	// filter := bson.D{{Key: "message_id", Value: "1"}}
 
-	// result, err := dbObj.FindOne(filter, nil)
+	// result, err := dbObj.FindOne(filter)
 	// if err != nil {
 	// 	panic(err)
 	// }
 
-	newMessage := db.Message{
-		MessageID:   "7",
-		MessageBody: "New message content",
-	}
+	// newMessage := db.Message{
+	// 	MessageID:   "7",
+	// 	MessageBody: "New message content",
+	// }
 
-	dbObj.InsertOne(newMessage)
+	// dbObj.InsertOne(newMessage)
 
-	results, err := dbObj.FindAll(nil)
-	if err != nil {
-		panic(err)
-	}
+	// filter := bson.D{{Key: "message_id", Value: "7"}}
+
+	// err := dbObj.DeleteMany(filter)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// results, err := dbObj.FindAll()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// filter := bson.M{"message_id": bson.M{"$in": []string{"1", "2"}}}
 	// results, err := dbObj.Find(filter, nil)
@@ -50,9 +56,9 @@ func main() {
 	// 	panic(err)
 	// }
 
-	for _, result := range results {
-		fmt.Printf("%s\n", result) // ispis u json-u
-	}
+	// for _, result := range results {
+	// 	fmt.Printf("%s\n", result) // ispis u json-u
+	// }
 
 	// jsonData, err := json.MarshalIndent(result, "", "    ")
 	// if err != nil {
