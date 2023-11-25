@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type DB struct {
+type MongoDB struct {
 	ctx       context.Context
 	dbName    string
 	tableName string
@@ -36,6 +36,7 @@ func ConnectToMongoDb() *mongo.Client {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Print("Successfully connected to Mongo!\n")
 	return client
 }
 
@@ -43,11 +44,11 @@ func DisconnectFromMongoDb(client *mongo.Client) {
 	if err := client.Disconnect(context.TODO()); err != nil {
 		panic(err)
 	}
-	fmt.Print("Disconnected!\n")
+	fmt.Print("Disconnected from Mongo!\n")
 }
 
-func NewDB(client *mongo.Client, dbName string, tableName string) (dbObj *DB) {
-	dbObj = new(DB) // mora da se rezervise mem za obj
+func NewMongoDB(client *mongo.Client, dbName string, tableName string) (dbObj *MongoDB) {
+	dbObj = new(MongoDB) // mora da se rezervise mem za obj
 	dbObj.ctx = context.TODO()
 	dbObj.dbName = dbName
 	dbObj.tableName = tableName
@@ -55,7 +56,7 @@ func NewDB(client *mongo.Client, dbName string, tableName string) (dbObj *DB) {
 	return
 }
 
-func (dbObj *DB) FindOne(filter interface{}) (result Message, err error) {
+func (dbObj *MongoDB) FindOne(filter interface{}) (result Message, err error) {
 	err = dbObj.db.FindOne(dbObj.ctx, filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		fmt.Print("No document was found with this filter!\n", err)
@@ -67,7 +68,7 @@ func (dbObj *DB) FindOne(filter interface{}) (result Message, err error) {
 	return
 }
 
-func (dbObj *DB) Find(filter interface{}) (results []Message, err error) {
+func (dbObj *MongoDB) Find(filter interface{}) (results []Message, err error) {
 	cursor, err := dbObj.db.Find(dbObj.ctx, filter)
 	if err != nil {
 		panic(err)
@@ -79,7 +80,7 @@ func (dbObj *DB) Find(filter interface{}) (results []Message, err error) {
 	return
 }
 
-func (dbObj *DB) FindAll() (results []Message, err error) {
+func (dbObj *MongoDB) FindAll() (results []Message, err error) {
 	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{})
 	if err != nil {
 		panic(err)
@@ -91,7 +92,7 @@ func (dbObj *DB) FindAll() (results []Message, err error) {
 	return
 }
 
-func (dbObj *DB) InsertOne(newMessage Message) (err error) {
+func (dbObj *MongoDB) InsertOne(newMessage Message) (err error) {
 	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage, &options.InsertOneOptions{})
 	if err != nil {
 		log.Fatal(err)
@@ -99,7 +100,7 @@ func (dbObj *DB) InsertOne(newMessage Message) (err error) {
 	return
 }
 
-func (dbObj *DB) InsertMany(messages []interface{}) (err error) {
+func (dbObj *MongoDB) InsertMany(messages []interface{}) (err error) {
 	_, err = dbObj.db.InsertMany(dbObj.ctx, messages)
 	if err != nil {
 		log.Fatal(err)
@@ -107,16 +108,16 @@ func (dbObj *DB) InsertMany(messages []interface{}) (err error) {
 	return
 }
 
-func (dbObj *DB) DeleteOne(filter interface{}) (err error) {
-	_, err = dbObj.db.DeleteOne(context.TODO(), filter)
+func (dbObj *MongoDB) DeleteOne(filter interface{}) (err error) {
+	_, err = dbObj.db.DeleteOne(dbObj.ctx, filter)
 	if err != nil {
 		panic(err)
 	}
 	return
 }
 
-func (dbObj *DB) DeleteMany(filter interface{}) (err error) {
-	_, err = dbObj.db.DeleteMany(context.TODO(), filter)
+func (dbObj *MongoDB) DeleteMany(filter interface{}) (err error) {
+	_, err = dbObj.db.DeleteMany(dbObj.ctx, filter)
 	if err != nil {
 		panic(err)
 	}

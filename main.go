@@ -12,6 +12,33 @@ func main() {
 	defer db.DisconnectFromPostgresDb(postgresClient)
 	//IGRANJE SA DB
 
+	// dbObj := db.NewPostgresDB(postgresClient)
+
+	// novi := db.User{
+	// 	Name:     "OpetNovi",
+	// 	Password: "1a1dc91c907325c69271ddf0c944bc72",
+	// 	PasteNum: 0,
+	// 	DevKey:   "e77989ed21758e78331b20e477fc5582",
+	// 	Email:    "dev1@gmail.com",
+	// }
+	// newId, err := dbObj.CreateUser(&novi)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Print("Succes -> ", newId, "\n")
+	// parsedUUID, err := uuid.Parse("6316cbc8-f91e-4903-b07d-f4251b3c48f3")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// usr, err := dbObj.ReadUser(parsedUUID)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// err = dbObj.DeleteUser(parsedUUID)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Print(usr, "\n")
 	// rows, err := postgresClient.Query("SELECT * FROM Users;")
 	// if err != nil {
 	// 	panic(err)
@@ -27,7 +54,7 @@ func main() {
 	// 	fmt.Print(id, " ", a, " ", b, " ", c, " ", d, " ", e, "\n")
 	// }
 
-	// dbObj := db.NewDB(client, "sample_mflix", "movies")
+	// dbObj := db.NewMongoDB(client, "sample_mflix", "movies")
 
 	// //neki random filter
 	// title := "Back to the Future"
