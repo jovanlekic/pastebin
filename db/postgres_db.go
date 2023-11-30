@@ -5,26 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"pastebin/db/models"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-type User struct {
-	UserID   uuid.UUID
-	Name     string
-	Password string
-	PasteNum int
-	DevKey   string
-	Email    string
-}
-
-type Object struct {
-	pasteKey  string
-	devKey    string
-	messageId string
-}
 type PostgresDB struct {
 	db *sql.DB
 }
@@ -39,7 +26,7 @@ func ConnectToPostgresDb() *sql.DB {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
-	connStr := "user=jovanadragutinovic host=localhost port=5432 dbname=mydb sslmode=disable"
+	connStr := "user=postgres host=localhost port=5432 dbname=mydb sslmode=disable"
 
 	dbo, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -61,7 +48,7 @@ func DisconnectFromPostgresDb(client *sql.DB) {
 }
 
 // CREATE
-func (dbObj *PostgresDB) CreateUser(ctx context.Context, user *User) (uuid.UUID, error) {
+func (dbObj *PostgresDB) CreateUser(ctx context.Context, user *models.User) (uuid.UUID, error) {
 	if user.UserID == uuid.Nil {
 		user.UserID = uuid.New()
 	}
@@ -82,18 +69,28 @@ func (dbObj *PostgresDB) CreateUser(ctx context.Context, user *User) (uuid.UUID,
 }
 
 // READ
-func (dbObj *PostgresDB) ReadUser(ctx context.Context, userID uuid.UUID) (User, error) {
-	var user User
+func (dbObj *PostgresDB) ReadUserById(ctx context.Context, userID uuid.UUID) (models.User, error) {
+	var user models.User
 	err := dbObj.db.QueryRowContext(ctx, "SELECT user_id, name, password, pasteNum, dev_key, email FROM Users WHERE user_id = $1", userID).
 		Scan(&user.UserID, &user.Name, &user.Password, &user.PasteNum, &user.DevKey, &user.Email)
 	if err != nil {
-		return User{}, err
+		return models.User{}, err
+	}
+	return user, nil
+}
+
+func (dbObj *PostgresDB) ReadUserByUsername(ctx context.Context, username string) (models.User, error) {
+	var user models.User
+	err := dbObj.db.QueryRowContext(ctx, "SELECT user_id, name, password, pasteNum, dev_key, email FROM Users WHERE name = $1", username).
+		Scan(&user.UserID, &user.Name, &user.Password, &user.PasteNum, &user.DevKey, &user.Email)
+	if err != nil {
+		return models.User{}, err
 	}
 	return user, nil
 }
 
 // UPDATE
-func (dbObj *PostgresDB) UpdateUser(ctx context.Context, userID uuid.UUID, updatedUser User) error {
+func (dbObj *PostgresDB) UpdateUser(ctx context.Context, userID uuid.UUID, updatedUser models.User) error {
 	_, err := dbObj.db.ExecContext(ctx, "UPDATE Users SET name=$1, password=$2, pasteNum=$3, dev_key=$4, email=$5 WHERE user_id=$6",
 		updatedUser.Name, updatedUser.Password, updatedUser.PasteNum, updatedUser.DevKey, updatedUser.Email, userID)
 	if err != nil {
