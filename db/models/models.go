@@ -14,5 +14,10 @@ type User struct {
 type Object struct {
 	PasteKey  string
 	DevKey    string
-	MessageId string
+	MessageID string
+}
+
+type Message struct {
+	MessageID   string `bson:"message_id"`
+	MessageBody string `bson:"message_body"`
 }

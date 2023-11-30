@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"pastebin/db/models"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,11 +18,6 @@ type MongoDB struct {
 	dbName    string
 	tableName string
 	db        *mongo.Collection
-}
-
-type Message struct {
-	MessageID   string `bson:"message_id"`
-	MessageBody string `bson:"message_body"`
 }
 
 func ConnectToMongoDb() *mongo.Client {
@@ -56,7 +52,7 @@ func NewMongoDB(client *mongo.Client, dbName string, tableName string) (dbObj *M
 	return
 }
 
-func (dbObj *MongoDB) FindOne(filter interface{}) (result Message, err error) {
+func (dbObj *MongoDB) FindOne(filter interface{}) (result models.Message, err error) {
 	err = dbObj.db.FindOne(dbObj.ctx, filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		fmt.Print("No document was found with this filter!\n", err)
@@ -68,7 +64,7 @@ func (dbObj *MongoDB) FindOne(filter interface{}) (result Message, err error) {
 	return
 }
 
-func (dbObj *MongoDB) Find(filter interface{}) (results []Message, err error) {
+func (dbObj *MongoDB) Find(filter interface{}) (results []models.Message, err error) {
 	cursor, err := dbObj.db.Find(dbObj.ctx, filter)
 	if err != nil {
 		panic(err)
@@ -80,7 +76,7 @@ func (dbObj *MongoDB) Find(filter interface{}) (results []Message, err error) {
 	return
 }
 
-func (dbObj *MongoDB) FindAll() (results []Message, err error) {
+func (dbObj *MongoDB) FindAll() (results []models.Message, err error) {
 	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{})
 	if err != nil {
 		panic(err)
@@ -92,7 +88,7 @@ func (dbObj *MongoDB) FindAll() (results []Message, err error) {
 	return
 }
 
-func (dbObj *MongoDB) InsertOne(newMessage Message) (err error) {
+func (dbObj *MongoDB) InsertOne(newMessage models.Message) (err error) {
 	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage, &options.InsertOneOptions{})
 	if err != nil {
 		log.Fatal(err)
