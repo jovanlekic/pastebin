@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -60,7 +61,7 @@ func DisconnectFromPostgresDb(client *sql.DB) {
 }
 
 // CREATE
-func (dbObj *PostgresDB) CreateUser(user *User) (uuid.UUID, error) {
+func (dbObj *PostgresDB) CreateUser(ctx context.Context, user *User) (uuid.UUID, error) {
 	if user.UserID == uuid.Nil {
 		user.UserID = uuid.New()
 	}
@@ -72,7 +73,7 @@ func (dbObj *PostgresDB) CreateUser(user *User) (uuid.UUID, error) {
 	`
 
 	var createdUserID uuid.UUID
-	err := dbObj.db.QueryRow(query, user.UserID, user.Name, user.Password, user.PasteNum, user.DevKey, user.Email).Scan(&createdUserID)
+	err := dbObj.db.QueryRowContext(ctx, query, user.UserID, user.Name, user.Password, user.PasteNum, user.DevKey, user.Email).Scan(&createdUserID)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -81,9 +82,9 @@ func (dbObj *PostgresDB) CreateUser(user *User) (uuid.UUID, error) {
 }
 
 // READ
-func (dbObj *PostgresDB) ReadUser(userID uuid.UUID) (User, error) {
+func (dbObj *PostgresDB) ReadUser(ctx context.Context, userID uuid.UUID) (User, error) {
 	var user User
-	err := dbObj.db.QueryRow("SELECT user_id, name, password, pasteNum, dev_key, email FROM Users WHERE user_id = $1", userID).
+	err := dbObj.db.QueryRowContext(ctx, "SELECT user_id, name, password, pasteNum, dev_key, email FROM Users WHERE user_id = $1", userID).
 		Scan(&user.UserID, &user.Name, &user.Password, &user.PasteNum, &user.DevKey, &user.Email)
 	if err != nil {
 		return User{}, err
@@ -92,8 +93,8 @@ func (dbObj *PostgresDB) ReadUser(userID uuid.UUID) (User, error) {
 }
 
 // UPDATE
-func (dbObj *PostgresDB) UpdateUser(userID uuid.UUID, updatedUser User) error {
-	_, err := dbObj.db.Exec("UPDATE Users SET name=$1, password=$2, pasteNum=$3, dev_key=$4, email=$5 WHERE user_id=$6",
+func (dbObj *PostgresDB) UpdateUser(ctx context.Context, userID uuid.UUID, updatedUser User) error {
+	_, err := dbObj.db.ExecContext(ctx, "UPDATE Users SET name=$1, password=$2, pasteNum=$3, dev_key=$4, email=$5 WHERE user_id=$6",
 		updatedUser.Name, updatedUser.Password, updatedUser.PasteNum, updatedUser.DevKey, updatedUser.Email, userID)
 	if err != nil {
 		return err
@@ -103,8 +104,8 @@ func (dbObj *PostgresDB) UpdateUser(userID uuid.UUID, updatedUser User) error {
 }
 
 // DELETE
-func (dbObj *PostgresDB) DeleteUser(userID uuid.UUID) error {
-	_, err := dbObj.db.Exec("DELETE FROM Users WHERE user_id=$1", userID)
+func (dbObj *PostgresDB) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := dbObj.db.ExecContext(ctx, "DELETE FROM Users WHERE user_id=$1", userID)
 	if err != nil {
 		return err
 	}
