@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -52,70 +53,40 @@ func NewMongoDB(client *mongo.Client, dbName string, tableName string) (dbObj *M
 	return
 }
 
-func (dbObj *MongoDB) FindOne(filter interface{}) (result models.Message, err error) {
-	err = dbObj.db.FindOne(dbObj.ctx, filter).Decode(&result)
-	if err == mongo.ErrNoDocuments {
-		fmt.Print("No document was found with this filter!\n", err)
-		return
-	}
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func (dbObj *MongoDB) Find(filter interface{}) (results []models.Message, err error) {
-	cursor, err := dbObj.db.Find(dbObj.ctx, filter)
-	if err != nil {
-		panic(err)
-	}
-
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		panic(err)
-	}
-	return
-}
-
-func (dbObj *MongoDB) FindAll() (results []models.Message, err error) {
-	cursor, err := dbObj.db.Find(dbObj.ctx, bson.D{})
-	if err != nil {
-		panic(err)
-	}
-
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		panic(err)
-	}
-	return
-}
-
-func (dbObj *MongoDB) InsertOne(newMessage models.Message) (err error) {
-	_, err = dbObj.db.InsertOne(dbObj.ctx, newMessage, &options.InsertOneOptions{})
+func (dbObj *MongoDB) CreateMessage(newMessage models.Message) (string, error) {
+	result, err := dbObj.db.InsertOne(dbObj.ctx, newMessage)
 	if err != nil {
 		log.Fatal(err)
+		return primitive.NilObjectID.Hex(), err
 	}
-	return
+
+	insertedID, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return primitive.NilObjectID.Hex(), fmt.Errorf("Failed to get ObjectId")
+	}
+
+	return insertedID.Hex(), nil
 }
 
-func (dbObj *MongoDB) InsertMany(messages []interface{}) (err error) {
-	_, err = dbObj.db.InsertMany(dbObj.ctx, messages)
+func (dbObj *MongoDB) ReadMessage(id primitive.ObjectID) (*models.Message, error) {
+	var message models.Message
+	err := dbObj.db.FindOne(dbObj.ctx, bson.M{"_id": id}).Decode(&message)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return
+	return &message, nil
 }
 
-func (dbObj *MongoDB) DeleteOne(filter interface{}) (err error) {
-	_, err = dbObj.db.DeleteOne(dbObj.ctx, filter)
-	if err != nil {
-		panic(err)
-	}
-	return
+func (dbObj *MongoDB) UpdateMessage(id primitive.ObjectID, updatedMessage models.Message) error {
+	_, err := dbObj.db.UpdateOne(
+		dbObj.ctx,
+		bson.M{"_id": id},
+		bson.D{{"$set", updatedMessage}},
+	)
+	return err
 }
 
-func (dbObj *MongoDB) DeleteMany(filter interface{}) (err error) {
-	_, err = dbObj.db.DeleteMany(dbObj.ctx, filter)
-	if err != nil {
-		panic(err)
-	}
-	return
+func (dbObj *MongoDB) DeleteMessage(id primitive.ObjectID) error {
+	_, err := dbObj.db.DeleteOne(dbObj.ctx, bson.M{"_id": id})
+	return err
 }
