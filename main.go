@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"pastebin/db"
 )
 
 func main() {
-	mongoClient := db.ConnectToMongoDb()
-	defer db.DisconnectFromMongoDb(mongoClient)
+	mongoClient, err := db.ConnectToMongoDb(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer db.DisconnectFromMongoDb(context.Background(), mongoClient)
 
-	postgresClient := db.ConnectToPostgresDb()
-	defer db.DisconnectFromPostgresDb(postgresClient)
+	// postgresClient := db.ConnectToPostgresDb()
+	// defer db.DisconnectFromPostgresDb(postgresClient)
 	//IGRANJE SA DB
 
 	// dbObj := db.NewPostgresDB(postgresClient)
