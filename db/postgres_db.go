@@ -4,11 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"pastebin/db/models"
 
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -22,24 +20,21 @@ func NewPostgresDB(db *sql.DB) (dbObj *PostgresDB) {
 	return
 }
 
-func ConnectToPostgresDb() *sql.DB {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
-	connStr := "user=postgres host=localhost port=5432 dbname=mydb sslmode=disable"
+func ConnectToPostgresDb(dbName, user, password string) (*sql.DB, error) {
+	connStr := fmt.Sprintf("user=%s password=%s host=localhost port=5432 dbname=%s sslmode=disable", user, password, dbName)
 
 	dbo, err := sql.Open("postgres", connStr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	err = dbo.Ping()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	fmt.Println("Successfully connected to Postgres!")
-	return dbo
+	return dbo, nil
 }
 
 func DisconnectFromPostgresDb(client *sql.DB) {
