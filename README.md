@@ -1,5 +1,7 @@
-# pastebin
+# Pastebin
 Simple pastebin service
+
+# DB part
 
 First commit - samo da proverimo
 
