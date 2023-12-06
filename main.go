@@ -1,18 +1,51 @@
 package main
 
 import (
-	"context"
-	"pastebin/db"
+	"database/sql"
+	"fmt"
+	"log"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func main() {
-	mongoClient, err := db.ConnectToMongoDb(context.Background())
+func runMigrations() {
+	db, err := sql.Open("postgres", "postgres://postgres:pass1234@localhost:5432/mydb?sslmode=disable")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer db.DisconnectFromMongoDb(context.Background(), mongoClient)
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations",
+		"postgres", driver)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Success migration!")
+}
 
-	// postgresClient := db.ConnectToPostgresDb()
+func main() {
+	// mongoClient, err := db.ConnectToMongoDb(context.Background())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer db.DisconnectFromMongoDb(context.Background(), mongoClient)
+
+	// dbObj := db.NewMongoDB(mongoClient, context.Background(), "sample_joca", "novi_messages")
+
+	runMigrations()
+
+	// postgresClient, err := db.ConnectToPostgresDb("", "", "")
+	// if err != nil {
+	// 	panic(err)
+	// }
 	// defer db.DisconnectFromPostgresDb(postgresClient)
 	//IGRANJE SA DB
 
