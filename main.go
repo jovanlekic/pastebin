@@ -43,8 +43,8 @@ func main() {
 
 	// dbObj := db.NewMongoDB(mongoClient, context.Background(), "sample_joca", "novi_messages")
 
-	runMigrations()
-	api.StartApiServer();
+	//runMigrations()
+	api.StartApiServerAndPrepareDbConnection();
 
 	// postgresClient, err := db.ConnectToPostgresDb("", "", "")
 	// if err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"pastebin/db/models"
+	"pastebin/models"
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"pastebin/db/models"
+	"pastebin/models"
 	"regexp"
 
 	"github.com/joho/godotenv"
