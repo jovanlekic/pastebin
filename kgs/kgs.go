@@ -25,7 +25,7 @@ func initKgs(db *db.PostgresDB) error {
 		return err
 	}
 	if !doneMigration {
-		err := db.FillUnusedTable(context.Background())
+		err := db.FillKeysTable(context.Background())
 		if err != nil {
 			return err
 		}
@@ -45,18 +45,18 @@ func GetInstance(conn *sql.DB) *kgs {
 
 func (k *kgs) Check(key string) (string, error) {
 	if key == "" {
-		res, err := k.db.MoveKeyFromUnusedToUsed(k.ctx)
+		res, err := k.db.GetAndMarkFirstUnusedKey(k.ctx)
 		if err != nil {
 			return "", err
 		}
 		return res, nil
 	} else {
-		isUsed, err := k.db.IsKeyInUsedTable(k.ctx, key)
+		isUsed, err := k.db.IsKeyUsed(k.ctx, key)
 		if err != nil {
 			return "", err
 		}
 		if isUsed {
-			res, err := k.db.MoveKeyFromUnusedToUsed(k.ctx)
+			res, err := k.db.GetAndMarkFirstUnusedKey(k.ctx)
 			if err != nil {
 				return "", err
 			}

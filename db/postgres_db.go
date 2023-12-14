@@ -123,27 +123,41 @@ func (dbObj *PostgresDB) CheckMigration(ctx context.Context, migrationName strin
 	return exists, nil
 }
 
-func (dbObj *PostgresDB) InsertWordIntoUnused(ctx context.Context, word string) error {
+// Function to mark a key as used
+func (dbObj *PostgresDB) MarkKeyAsUsed(ctx context.Context, key string) error {
 	query := `
-        INSERT INTO Unused (id, key)
-        VALUES (uuid_generate_v4(), $1)
+        UPDATE Keys
+        SET used = true
+        WHERE key = $1
     `
 
-	_, err := dbObj.db.ExecContext(ctx, query, word)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Word inserted into Unused table successfully")
-	return nil
+	_, err := dbObj.db.ExecContext(ctx, query, key)
+	return err
 }
 
-// Function to retrieve the first key from the Unused table
+// Function to check if a key is marked as used
+func (dbObj *PostgresDB) IsKeyUsed(ctx context.Context, key string) (bool, error) {
+	query := `
+        SELECT used
+        FROM Keys
+        WHERE key = $1
+    `
+
+	var isUsed bool
+	err := dbObj.db.QueryRowContext(ctx, query, key).Scan(&isUsed)
+	if err != nil {
+		return false, err
+	}
+
+	return isUsed, nil
+}
+
+// Function to get the first unused key
 func (dbObj *PostgresDB) GetFirstUnusedKey(ctx context.Context) (string, error) {
 	query := `
         SELECT key
-        FROM Unused
-        ORDER BY id
+        FROM Keys
+        WHERE used = false
         LIMIT 1
     `
 
@@ -156,110 +170,46 @@ func (dbObj *PostgresDB) GetFirstUnusedKey(ctx context.Context) (string, error) 
 	return key, nil
 }
 
-// Function to delete a key from the Unused table
-func (dbObj *PostgresDB) DeleteKeyFromUnused(ctx context.Context, key string) error {
-	query := `
-        DELETE FROM Unused
-        WHERE key = $1
-    `
-
-	_, err := dbObj.db.ExecContext(ctx, query, key)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Key '%s' deleted from Unused table successfully\n", key)
-	return nil
-}
-
-// Function to insert a key into the Used table
-func (dbObj *PostgresDB) InsertKeyIntoUsed(ctx context.Context, key string) error {
-	query := `
-        INSERT INTO Used (id, key)
-        VALUES (uuid_generate_v4(), $1)
-    `
-
-	_, err := dbObj.db.ExecContext(ctx, query, key)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Key '%s' inserted into Used table successfully\n", key)
-	return nil
-}
-
-// Function to move a key from the Unused table to the Used table (atomic)
-func (dbObj *PostgresDB) MoveKeyFromUnusedToUsed(ctx context.Context) (string, error) {
-	tx, err := dbObj.db.BeginTx(ctx, nil)
+// Function to get the first unused key and mark it as used
+func (dbObj *PostgresDB) GetAndMarkFirstUnusedKey(ctx context.Context) (string, error) {
+	key, err := dbObj.GetFirstUnusedKey(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	var key string
-
-	// Get the first key from the Unused table
-	key, err = dbObj.GetFirstUnusedKey(ctx)
+	// Mark the key as used
+	err = dbObj.MarkKeyAsUsed(ctx, key)
 	if err != nil {
-		// Roll back the transaction if getting the key fails
-		_ = tx.Rollback()
 		return "", err
 	}
 
-	// Insert the key into the Used table
-	err = dbObj.InsertKeyIntoUsed(ctx, key)
-	if err != nil {
-		// Roll back the transaction if inserting into Used fails
-		_ = tx.Rollback()
-		return "", err
-	}
-
-	// Delete the key from the Unused table
-	err = dbObj.DeleteKeyFromUnused(ctx, key)
-	if err != nil {
-		// Roll back the transaction if deleting from Unused fails
-		_ = tx.Rollback()
-		return "", err
-	}
-
-	// Commit the transaction if all operations are successful
-	if err := tx.Commit(); err != nil {
-		return "", err
-	}
-
-	fmt.Printf("Key '%s' moved from Unused to Used table successfully\n", key)
 	return key, nil
 }
 
-// Function to check if a key exists in the Used table
-func (dbObj *PostgresDB) IsKeyInUsedTable(ctx context.Context, key string) (bool, error) {
+// Function to insert a key into the Keys table
+func (dbObj *PostgresDB) InsertKeyIntoKeys(ctx context.Context, key string) error {
 	query := `
-        SELECT EXISTS (
-            SELECT 1
-            FROM Used
-            WHERE key = $1
-        )
+        INSERT INTO Keys (id, key, used)
+        VALUES (uuid_generate_v4(), $1, false)
     `
 
-	var exists bool
-	err := dbObj.db.QueryRowContext(ctx, query, key).Scan(&exists)
+	_, err := dbObj.db.ExecContext(ctx, query, key)
 	if err != nil {
-		return false, err
+		return err
 	}
-
-	return exists, nil
+	return nil
 }
 
-// Function to fill the Unused table with all possible 6-character combinations of letters, numbers, and underscores
-func (dbObj *PostgresDB) FillUnusedTable(ctx context.Context) error {
-	// characters := "abcdefghijklmnopqrstuvwxyz0123456789_"
-	characters := "abc" // speed
+// Function to fill the Keys table with all possible 6-character combinations of letters 'a', 'b', and 'c'
+func (dbObj *PostgresDB) FillKeysTable(ctx context.Context) error {
+	characters := "abc"
 
 	tx, err := dbObj.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	err = dbObj.InsertMigration(ctx, "FillUnusedTable")
+	err = dbObj.InsertMigration(ctx, "FillKeysTable")
 	if err != nil {
 		// Roll back the transaction if migration insertion fails
 		_ = tx.Rollback()
@@ -268,7 +218,7 @@ func (dbObj *PostgresDB) FillUnusedTable(ctx context.Context) error {
 
 	defer func() {
 		if err != nil {
-			// Roll back the transaction if an error occurs during word insertion
+			// Roll back the transaction if an error occurs during key insertion
 			_ = tx.Rollback()
 		}
 	}()
@@ -282,7 +232,7 @@ func (dbObj *PostgresDB) FillUnusedTable(ctx context.Context) error {
 							word := string(characters[i]) + string(characters[j]) + string(characters[k]) +
 								string(characters[l]) + string(characters[m]) + string(characters[n])
 
-							err := dbObj.InsertWordIntoUnused(ctx, word)
+							err := dbObj.InsertKeyIntoKeys(ctx, word)
 							if err != nil {
 								return err
 							}
@@ -293,11 +243,11 @@ func (dbObj *PostgresDB) FillUnusedTable(ctx context.Context) error {
 		}
 	}
 
-	// Commit the transaction if all word insertions are successful
+	// Commit the transaction if all key insertions are successful
 	err = tx.Commit()
 	if err != nil {
 		// Clear the migration if committing fails
-		_ = dbObj.DeleteMigration(ctx, "FillUnusedTable")
+		_ = dbObj.DeleteMigration(ctx, "FillKeysTable")
 		return err
 	}
 

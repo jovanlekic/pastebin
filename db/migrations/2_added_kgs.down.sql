@@ -1,10 +1,7 @@
 -- postgres.down.sql
 
--- Drop the Used table
-DROP TABLE IF EXISTS Used;
+-- Drop the Keys table
+DROP TABLE IF EXISTS Keys;
 
--- Drop the Unused table
-DROP TABLE IF EXISTS Unused;
-
--- Drop the Unused table
+-- Drop the Migration table
 DROP TABLE IF EXISTS Migration;

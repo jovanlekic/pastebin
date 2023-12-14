@@ -3,9 +3,7 @@ package db
 import (
 	"context"
 	"crypto/md5"
-	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"pastebin/db/models"
 	"testing"
@@ -77,62 +75,34 @@ func prepareObjectTable(t *testing.T, testDB *PostgresDB) {
 	log.Println("Object table created successfully!")
 }
 
-func prepareUsedTable(t *testing.T, testDB *PostgresDB) {
-	// Drop the Used table if it exists
+func prepareKeysTable(t *testing.T, testDB *PostgresDB) {
+	// Drop the Keys table if it exists
 	dropScript := `
-		DROP TABLE IF EXISTS Used;
-	`
+        DROP TABLE IF EXISTS Keys;
+    `
 
 	_, err := testDB.db.ExecContext(context.Background(), dropScript)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create the Used table with your specified schema
+	// Create the Keys table with your specified schema
 	createScript := `
 		CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-		CREATE TABLE Used (
-			id UUID DEFAULT uuid_generate_v4(),
-			key VARCHAR(20) NOT NULL,
-			PRIMARY KEY (id)
-		);
-	`
+        CREATE TABLE IF NOT EXISTS Keys (
+            id UUID DEFAULT uuid_generate_v4(),
+            key VARCHAR(32) NOT NULL,
+            used BOOLEAN NOT NULL,
+            PRIMARY KEY (id)
+        );
+    `
 
 	_, err = testDB.db.ExecContext(context.Background(), createScript)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	log.Println("Used table created successfully!")
-}
-
-func prepareUnusedTable(t *testing.T, testDB *PostgresDB) {
-	// Drop the Unused table if it exists
-	dropScript := `
-		DROP TABLE IF EXISTS Unused;
-	`
-
-	_, err := testDB.db.ExecContext(context.Background(), dropScript)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create the Unused table with your specified schema
-	createScript := `
-		CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-		CREATE TABLE Unused (
-			id UUID DEFAULT uuid_generate_v4(),
-			key VARCHAR(20) NOT NULL,
-			PRIMARY KEY (id)
-		);
-	`
-
-	_, err = testDB.db.ExecContext(context.Background(), createScript)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	log.Println("Unused table created successfully!")
+	log.Println("Keys table created successfully!")
 }
 
 func prepareMigrationTable(t *testing.T, testDB *PostgresDB) {
@@ -535,7 +505,7 @@ func TestDeleteMigration(t *testing.T) {
 	assert.False(t, exists, "Expected migration to be deleted from the database")
 }
 
-func TestFillUnusedTable(t *testing.T) {
+func TestMarkKeyAsUsed(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
 		t.Fatal(err)
@@ -543,34 +513,26 @@ func TestFillUnusedTable(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	// Ensure Unused and Migration tables are created
-	prepareUnusedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	err = testDB.FillUnusedTable(context.Background())
-	assert.NoError(t, err, "Expected no error")
-
-	// Check if the migration exists
-	exists, err := testDB.CheckMigration(context.Background(), "FillUnusedTable")
-	assert.NoError(t, err, "Expected no error")
-	assert.True(t, exists, "Expected migration to exist in the database")
-
-	// Check if Unused table is filled
-	count, err := countRowsInTable(t, testDB.db, "Unused")
-	assert.NoError(t, err, "Expected no error")
-	assert.Greater(t, count, 0, "Expected Unused table to be filled")
-}
-
-func countRowsInTable(t *testing.T, db *sql.DB, tableName string) (int, error) {
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
-	var count int
-	err := db.QueryRowContext(context.Background(), query).Scan(&count)
+	// Insert a key into the Keys table
+	testKey := "test_key"
+	err = testDB.InsertKeyIntoKeys(context.Background(), testKey)
 	if err != nil {
-		return 0, err
+		t.Fatal(err)
 	}
-	return count, nil
+
+	// Mark the key as used
+	err = testDB.MarkKeyAsUsed(context.Background(), testKey)
+	assert.NoError(t, err, "Expected no error")
+
+	// Check if the key is marked as used
+	isUsed, err := testDB.IsKeyUsed(context.Background(), testKey)
+	assert.NoError(t, err, "Expected no error")
+	assert.True(t, isUsed, "Expected the key to be marked as used")
 }
 
-func TestInsertWordIntoUnused(t *testing.T) {
+func TestIsKeyUsed(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
 		t.Fatal(err)
@@ -578,17 +540,28 @@ func TestInsertWordIntoUnused(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	prepareUnusedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	word := "testword"
+	// Insert a key into the Keys table
+	testKey := "test_key"
+	err = testDB.InsertKeyIntoKeys(context.Background(), testKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err = testDB.InsertWordIntoUnused(context.Background(), word)
+	// Check if the key is initially not marked as used
+	isUsed, err := testDB.IsKeyUsed(context.Background(), testKey)
+	assert.NoError(t, err, "Expected no error")
+	assert.False(t, isUsed, "Expected the key to not be marked as used")
+
+	// Mark the key as used
+	err = testDB.MarkKeyAsUsed(context.Background(), testKey)
 	assert.NoError(t, err, "Expected no error")
 
-	// Check if the word exists in the Unused table
-	exists, err := testDB.IsKeyInUsedTable(context.Background(), word)
+	// Check if the key is now marked as used
+	isUsed, err = testDB.IsKeyUsed(context.Background(), testKey)
 	assert.NoError(t, err, "Expected no error")
-	assert.True(t, exists, "Expected word to exist in the Unused table")
+	assert.True(t, isUsed, "Expected the key to be marked as used")
 }
 
 func TestGetFirstUnusedKey(t *testing.T) {
@@ -599,20 +572,24 @@ func TestGetFirstUnusedKey(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	prepareUnusedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	// Insert a word into the Unused table
-	word := "testword"
-	err = testDB.InsertWordIntoUnused(context.Background(), word)
-	assert.NoError(t, err, "Expected no error")
+	// Insert keys into the Keys table
+	keys := []string{"key1", "key2", "key3"}
+	for _, key := range keys {
+		err := testDB.InsertKeyIntoKeys(context.Background(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// Get the first unused key
 	firstKey, err := testDB.GetFirstUnusedKey(context.Background())
 	assert.NoError(t, err, "Expected no error")
-	assert.Equal(t, word, firstKey, "Expected first key to match the inserted word")
+	assert.NotEmpty(t, firstKey, "Expected a non-empty key")
 }
 
-func TestDeleteKeyFromUnused(t *testing.T) {
+func TestGetAndMarkFirstUnusedKey(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
 		t.Fatal(err)
@@ -620,24 +597,29 @@ func TestDeleteKeyFromUnused(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	prepareUnusedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	// Insert a word into the Unused table
-	word := "testword"
-	err = testDB.InsertWordIntoUnused(context.Background(), word)
-	assert.NoError(t, err, "Expected no error")
+	// Insert keys into the Keys table
+	keys := []string{"key1", "key2", "key3"}
+	for _, key := range keys {
+		err := testDB.InsertKeyIntoKeys(context.Background(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	// Delete the word from the Unused table
-	err = testDB.DeleteKeyFromUnused(context.Background(), word)
+	// Get and mark the first unused key
+	firstKey, err := testDB.GetAndMarkFirstUnusedKey(context.Background())
 	assert.NoError(t, err, "Expected no error")
+	assert.NotEmpty(t, firstKey, "Expected a non-empty key")
 
-	// Check if the word exists in the Unused table after deletion
-	exists, err := testDB.IsKeyInUsedTable(context.Background(), word)
+	// Check if the key is marked as used
+	isUsed, err := testDB.IsKeyUsed(context.Background(), firstKey)
 	assert.NoError(t, err, "Expected no error")
-	assert.False(t, exists, "Expected word to be deleted from the Unused table")
+	assert.True(t, isUsed, "Expected the key to be marked as used")
 }
 
-func TestInsertKeyIntoUsed(t *testing.T) {
+func TestInsertKeyIntoKeys(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
 		t.Fatal(err)
@@ -645,20 +627,20 @@ func TestInsertKeyIntoUsed(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	prepareUsedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	key := "testkey"
-
-	err = testDB.InsertKeyIntoUsed(context.Background(), key)
+	// Insert a key into the Keys table
+	testKey := "test_key"
+	err = testDB.InsertKeyIntoKeys(context.Background(), testKey)
 	assert.NoError(t, err, "Expected no error")
 
-	// Check if the key exists in the Used table
-	exists, err := testDB.IsKeyInUsedTable(context.Background(), key)
+	// Check if the key is in the Keys table
+	isUsed, err := testDB.IsKeyUsed(context.Background(), testKey)
 	assert.NoError(t, err, "Expected no error")
-	assert.True(t, exists, "Expected key to exist in the Used table")
+	assert.False(t, isUsed, "Expected the key to not be marked as used")
 }
 
-func TestMoveKeyFromUnusedToUsed(t *testing.T) {
+func TestFillKeysTable(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
 		t.Fatal(err)
@@ -666,24 +648,28 @@ func TestMoveKeyFromUnusedToUsed(t *testing.T) {
 	defer DisconnectFromPostgresDb(postgresClient)
 	testDB := NewPostgresDB(postgresClient)
 
-	prepareUsedTable(t, testDB)
+	prepareKeysTable(t, testDB)
 
-	// Insert a word into the Unused table
-	word := "testword"
-	err = testDB.InsertWordIntoUnused(context.Background(), word)
+	// Fill the Keys table with 6-character words
+	err = testDB.FillKeysTable(context.Background())
 	assert.NoError(t, err, "Expected no error")
 
-	// Move the key from Unused to Used
-	movedKey, err := testDB.MoveKeyFromUnusedToUsed(context.Background())
-	assert.NoError(t, err, "Expected no error")
-
-	// Check if the moved key exists in the Used table
-	exists, err := testDB.IsKeyInUsedTable(context.Background(), movedKey)
-	assert.NoError(t, err, "Expected no error")
-	assert.True(t, exists, "Expected moved key to exist in the Used table")
-
-	// Check if the moved key is deleted from the Unused table
-	exists, err = testDB.IsKeyInUsedTable(context.Background(), movedKey)
-	assert.NoError(t, err, "Expected no error")
-	assert.False(t, exists, "Expected moved key to be deleted from the Unused table")
+	// Check if all keys are in the Keys table
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			for k := 0; k < 3; k++ {
+				for l := 0; l < 3; l++ {
+					for m := 0; m < 3; m++ {
+						for n := 0; n < 3; n++ {
+							key := string('a'+i) + string('a'+j) + string('a'+k) +
+								string('a'+l) + string('a'+m) + string('a'+n)
+							isUsed, err := testDB.IsKeyUsed(context.Background(), key)
+							assert.NoError(t, err, "Expected no error")
+							assert.False(t, isUsed, "Expected the key to not be marked as used")
+						}
+					}
+				}
+			}
+		}
+	}
 }
