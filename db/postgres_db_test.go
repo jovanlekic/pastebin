@@ -661,8 +661,8 @@ func TestFillKeysTable(t *testing.T) {
 				for l := 0; l < 3; l++ {
 					for m := 0; m < 3; m++ {
 						for n := 0; n < 3; n++ {
-							key := string('a'+i) + string('a'+j) + string('a'+k) +
-								string('a'+l) + string('a'+m) + string('a'+n)
+							key := string(rune('a'+i)) + string(rune('a'+j)) + string(rune('a'+k)) +
+								string(rune('a'+l)) + string(rune('a'+m)) + string(rune('a'+n))
 							isUsed, err := testDB.IsKeyUsed(context.Background(), key)
 							assert.NoError(t, err, "Expected no error")
 							assert.False(t, isUsed, "Expected the key to not be marked as used")
