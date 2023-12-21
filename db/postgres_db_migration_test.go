@@ -83,3 +83,25 @@ func TestDeleteMigration(t *testing.T) {
 	assert.NoError(t, err, "Expected no error")
 	assert.False(t, exists, "Expected migration to be deleted from the database")
 }
+
+func TestCheckMigration(t *testing.T) {
+	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DisconnectFromPostgresDb(postgresClient)
+	testDB := NewPostgresDB(postgresClient)
+
+	prepareMigrationTable(t, testDB)
+
+	migrationName := "TestMigration"
+
+	// Insert a migration record
+	err = testDB.InsertMigration(context.Background(), migrationName)
+	assert.NoError(t, err, "Expected no error")
+
+	// Check if the migration exists after deletion
+	exists, err := testDB.CheckMigration(context.Background(), migrationName)
+	assert.NoError(t, err, "Expected no error")
+	assert.True(t, exists, "Expected migration to be found in the database")
+}
