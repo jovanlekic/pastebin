@@ -112,7 +112,7 @@ func GetPaste(w http.ResponseWriter, r *http.Request){
 	vars := mux.Vars(r)
 	pasteKey := vars["pasteKey"]
 
-	object, errObj := ConnectorPostgresDB.ReadObjectByPasteKey(context.Background(), pasteKey)
+	object, errObj := ConnectorPostgresDB.ReadObjectWithoutDevKey(context.Background(), pasteKey)
 	if errObj != nil {
 		http.Error(w,"Paste not found", http.StatusNotFound)
 		log.Println("Error: paste"+ pasteKey + " not found!")
