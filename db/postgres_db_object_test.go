@@ -101,6 +101,41 @@ func TestReadObject(t *testing.T) {
 	assert.Nil(t, nonExistentObject, "Expected a nil object for a non-existent pasteKey and devKey")
 }
 
+func TestReadObjectWithoutDevKey(t *testing.T) {
+	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DisconnectFromPostgresDb(postgresClient)
+	testDB := NewPostgresDB(postgresClient)
+
+	prepareObjectTable(t, testDB)
+
+	// Create a test object to be inserted into the database
+	testObject := models.Object{
+		PasteKey:  "test_paste_key",
+		DevKey:    "test_dev_key",
+		MessageID: "test_message_id",
+	}
+
+	// Insert the test object into the database
+	err = testDB.CreateObject(context.Background(), &testObject)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the object from the database using only pasteKey
+	resultObject, err := testDB.ReadObjectWithoutDevKey(context.Background(), testObject.PasteKey)
+	assert.NoError(t, err, "Expected no error")
+	assert.Equal(t, &testObject, resultObject, "Expected the retrieved object to match the inserted object")
+
+	// Test case where the object does not exist in the database
+	nonExistentPasteKey := "non_existent_paste_key"
+	nonExistentObject, err := testDB.ReadObjectWithoutDevKey(context.Background(), nonExistentPasteKey)
+	assert.Error(t, err, "Expected an error for a non-existent object")
+	assert.Nil(t, nonExistentObject, "Expected a nil object for a non-existent pasteKey")
+}
+
 func TestUpdateObject(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
