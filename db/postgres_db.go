@@ -109,6 +109,21 @@ func (dbObj *PostgresDB) ReadObject(ctx context.Context, pasteKey, devKey string
 	return &obj, nil
 }
 
+func (dbObj *PostgresDB) ReadObjectByPasteKey(ctx context.Context, pasteKey string) (*models.Object, error) {
+	var obj models.Object
+	query := `
+		SELECT paste_key, dev_key, message_id
+		FROM Object
+		WHERE paste_key = $1
+	`
+
+	err := dbObj.db.QueryRowContext(ctx, query, pasteKey).Scan(&obj.PasteKey, &obj.DevKey, &obj.MessageID)
+	if err != nil {
+		return nil, err
+	}
+	return &obj, nil
+}
+
 // UPDATE
 func (dbObj *PostgresDB) UpdateUser(ctx context.Context, userID uuid.UUID, updatedUser models.User) error {
 	_, err := dbObj.db.ExecContext(ctx, "UPDATE Users SET name=$1, password=$2, pasteNum=$3, dev_key=$4, email=$5 WHERE user_id=$6",

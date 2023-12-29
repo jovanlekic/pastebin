@@ -35,6 +35,7 @@ func ConnectToMongoDb(ctx context.Context) (*mongo.Client, error) {
 		return nil, err
 	}
 	uri := os.Getenv("MONGODB_URI")
+	log.Println(uri)
 
 	if uri == "" {
 		log.Fatal("You must set your 'MONGODB_URI' environment variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")

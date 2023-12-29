@@ -19,8 +19,14 @@ type UserRegistration struct { // for communication between frontend and servers
 }
 
 type Paste struct{
-	Username 	string `json:"username"`
-	Paste 		string `json:"paste"`
+	DevKey	 	string `json:"devkey"`
+	PasteKey	string `json:"pastekey"`
+	Message 	string `json:"message"`
+}
+
+type DeleteRequest struct{
+	DevKey  string	`json:"devkey"`
+	PasteKey    string	`json:"pastekey"`
 }
 
 
@@ -46,3 +52,4 @@ type Message struct { // for communication between api servers and database
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
 	MessageBody string             `bson:"message_body"`
 }
+

@@ -9,8 +9,7 @@ import (
 )
 
 func makeDevKey() string{
-
-	return "";
+	return "devkey1";
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +38,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	if _, err := ConnectorPostresDB.CreateUser(context.Background(), &newUser); err!=nil{
+	if _, err := ConnectorPostgresDB.CreateUser(context.Background(), &newUser); err!=nil{
 		log.Println(err)
 		http.Error(w,"Impossible to register", http.StatusBadRequest)
 		return
@@ -65,7 +64,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := ConnectorPostresDB.ReadUserByUsername(context.Background(), loginRequest.Username);
+	user, err := ConnectorPostgresDB.ReadUserByUsername(context.Background(), loginRequest.Username);
 	if err!=nil{
 		log.Println(err)
 		http.Error(w,"Cannot login with these credentials", http.StatusBadRequest)
@@ -79,11 +78,17 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 
 	// make jwt token and send back to user
-	
+	newToken, err := CreateNewToken(user.Name, user.DevKey);
+	if err!=nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return;
+	}
 
 
 	w.WriteHeader(http.StatusAccepted)
+	data,_ := json.Marshal(map[string]interface{}{"Token": newToken})
+	w.Write(data)
+
 }
