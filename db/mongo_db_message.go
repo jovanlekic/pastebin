@@ -24,6 +24,23 @@ func (dbObj *MongoDB) CreateMessage(messageBody string) (string, error) {
 	return insertedID.Hex(), nil
 }
 
+func (dbObj *MongoDB) ReadMessages(ids []primitive.ObjectID) ([]models.Message, error) {
+	filter := bson.M{"_id": bson.M{"$in": ids}}
+
+	cursor, err := dbObj.db.Find(dbObj.ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(dbObj.ctx)
+
+	var messages []models.Message
+	if err := cursor.All(dbObj.ctx, &messages); err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
+
 func (dbObj *MongoDB) ReadMessage(id primitive.ObjectID) (*models.Message, error) {
 	var message models.Message
 	err := dbObj.db.FindOne(dbObj.ctx, bson.M{"_id": id}).Decode(&message)
