@@ -9,6 +9,59 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+func TestReadMessages(t *testing.T) {
+	// Set up MongoDB client for testing
+	client, err := ConnectToMongoDb(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DisconnectFromMongoDb(context.Background(), client)
+
+	// Create a test database and collection
+	testDB := NewMongoDB(client, context.Background(), "test_db", "messages")
+
+	// Drop the existing collection to start with a clean slate
+	err = testDB.db.Drop(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert some test messages into the collection
+	message1 := models.Message{MessageBody: "Test message 1"}
+	message2 := models.Message{MessageBody: "Test message 2"}
+
+	insertResult, err := testDB.db.InsertMany(context.Background(), []interface{}{message1, message2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Convert the inserted IDs to ObjectIDs
+	var objectIDs []primitive.ObjectID
+	for _, id := range insertResult.InsertedIDs {
+		objectID, ok := id.(primitive.ObjectID)
+		if !ok {
+			t.Fatal("Failed to convert ID to ObjectID")
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+
+	// Call the ReadMessages function with the test IDs
+	messages, err := testDB.ReadMessages(objectIDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the retrieved messages match the inserted ones
+	if len(messages) != 2 {
+		t.Fatalf("Expected 2 messages, got %d", len(messages))
+	}
+
+	// Compare message bodies
+	if messages[0].MessageBody != "Test message 1" || messages[1].MessageBody != "Test message 2" {
+		t.Fatal("Retrieved messages do not match expected values")
+	}
+}
+
 func TestCreateMessage(t *testing.T) {
 	client, err := ConnectToMongoDb(context.Background())
 	if err != nil {

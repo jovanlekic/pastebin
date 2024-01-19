@@ -16,7 +16,37 @@ func (dbObj *PostgresDB) CreateObject(ctx context.Context, obj *models.Object) e
 	return err
 }
 
-// READ
+// READ all objects with a certain devKey
+func (dbObj *PostgresDB) ReadObjectsByDevKey(ctx context.Context, devKey string) ([]models.Object, error) {
+	var objects []models.Object
+	query := `
+		SELECT paste_key, dev_key, message_id
+		FROM Object
+		WHERE dev_key = $1
+	`
+
+	rows, err := dbObj.db.QueryContext(ctx, query, devKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var obj models.Object
+		if err := rows.Scan(&obj.PasteKey, &obj.DevKey, &obj.MessageID); err != nil {
+			return nil, err
+		}
+		objects = append(objects, obj)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return objects, nil
+}
+
+// READ Object
 func (dbObj *PostgresDB) ReadObject(ctx context.Context, pasteKey, devKey string) (*models.Object, error) {
 	var obj models.Object
 	query := `

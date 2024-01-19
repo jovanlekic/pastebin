@@ -65,6 +65,52 @@ func TestCreateObject(t *testing.T) {
 	assert.NoError(t, err, "Expected no error")
 }
 
+func TestReadObjectsByDevKey(t *testing.T) {
+	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DisconnectFromPostgresDb(postgresClient)
+	testDB := NewPostgresDB(postgresClient)
+
+	prepareObjectTable(t, testDB)
+
+	devKey := "your_test_dev_key"
+
+	expectedObject1 := models.Object{
+		PasteKey:  "test_paste_key1",
+		DevKey:    devKey,
+		MessageID: "test_message_id1",
+	}
+
+	expectedObject2 := models.Object{
+		PasteKey:  "test_paste_key2",
+		DevKey:    devKey,
+		MessageID: "test_message_id2",
+	}
+	err = testDB.CreateObject(context.Background(), &expectedObject1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = testDB.CreateObject(context.Background(), &expectedObject2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	objects, err := testDB.ReadObjectsByDevKey(context.Background(), devKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(objects) != 2 {
+		t.Fatalf("Expected %d objects, got %d", 2, len(objects))
+	}
+
+	if objects[0].PasteKey != "test_paste_key1" || objects[1].PasteKey != "test_paste_key2" {
+		t.Fatal("Retrieved objects do not match expected values")
+	}
+}
+
 func TestReadObject(t *testing.T) {
 	postgresClient, err := ConnectToPostgresDb("test_db", "postgres", "pass1234")
 	if err != nil {
