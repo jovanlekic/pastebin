@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var pasteHelper string = "b"
 
 // tester function
 func ChekerHandler(w http.ResponseWriter, r *http.Request){
@@ -47,6 +46,7 @@ func CreatePaste(w http.ResponseWriter, r *http.Request){
 	if error != nil {
 		http.Error(w,"You're Unauthorized due to invalid token", http.StatusUnauthorized)
 		log.Println("Unauthorized access: Try to access " + r.URL.String())
+		return
 	}
 	//usernameToken := mapClaims["username"].(string)
 	devKeyToken := mapClaims["devkey"].(string)
@@ -75,6 +75,12 @@ func CreatePaste(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	pastekey, errKey := KgsPasteKeys.Check(requestData.PasteKey)
+	if errKey != nil {
+		http.Error(w,"Error: Cannot create paste", http.StatusInternalServerError)
+		log.Println("Error: Cannot create key for paste: "+ requestData.PasteKey + ": " + errKey.Error())
+		return 
+	}
 
 	// first create message
 	messageId, errMsg := ConnectorMongoDB.CreateMessage(requestData.Message)
@@ -84,13 +90,14 @@ func CreatePaste(w http.ResponseWriter, r *http.Request){
 		return 
 	}
 
+	
 
 	newObject := models.Object{
-		PasteKey: 	 pasteHelper,
+		PasteKey: 	 pastekey,
 		DevKey: 	requestData.DevKey,
 		MessageID: 	messageId,
 	}
-	pasteHelper = pasteHelper + "a"
+	
 
 	errObj := ConnectorPostgresDB.CreateObject(context.Background(), &newObject)
 	if errObj != nil {
@@ -144,6 +151,7 @@ func DeletePaste(w http.ResponseWriter, r *http.Request){
 	if error != nil {
 		http.Error(w,"You're Unauthorized due to invalid token", http.StatusUnauthorized)
 		log.Println("Unauthorized access: Try to access " + r.URL.String())
+		return
 	}
 
 	//usernameToken := mapClaims["username"].(string)
@@ -177,7 +185,7 @@ func DeletePaste(w http.ResponseWriter, r *http.Request){
 	object, errObj := ConnectorPostgresDB.ReadObject(context.Background(), requestData.PasteKey, requestData.DevKey)
 	if errObj != nil {
 		http.Error(w,"Not valid data!", http.StatusBadRequest)
-		log.Println("Error: User devkey: " + requestData.DevKey + " tried to delete paste: " + requestData.PasteKey + " but paste doesnt exist!")
+		log.Println("Error: User devkey: " + requestData.DevKey + " tried to delete paste: " + requestData.PasteKey + " but paste doesnt exist or he is not authorized!")
 		return 
 	}
 
@@ -205,4 +213,32 @@ func DeletePaste(w http.ResponseWriter, r *http.Request){
 
 	
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func getUserInfo(w http.ResponseWriter, r *http.Request){
+	mapClaims, error := ParseAccesToken(r)
+	if error != nil {
+		http.Error(w,"You're Unauthorized due to invalid token", http.StatusUnauthorized)
+		log.Println("Unauthorized access: Try to access " + r.URL.String())
+		return
+	}
+
+	username := mapClaims["username"].(string)
+	//devkey := mapClaims["devkey"].(string)
+
+	user, err := ConnectorPostgresDB.ReadUserByUsername(context.Background(), username);
+	if err!=nil{
+		log.Println(err)
+		http.Error(w,"Error: user doesn't exist", http.StatusNotFound)
+		return
+	} 
+
+	w.WriteHeader(http.StatusOK)
+	data,_ := json.Marshal(map[string]interface{}{
+		"username": user.Name,
+		"email": user.Email,
+		"pastenum": user.PasteNum,
+		"devkey": user.DevKey,
+	})
+	w.Write(data)
 }

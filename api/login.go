@@ -8,9 +8,7 @@ import (
 	"context"
 )
 
-func makeDevKey() string{
-	return "devkey1";
-}
+
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var newUserReg models.UserRegistration
@@ -29,11 +27,18 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// ovde bih mozda uradio md5 ili neku hes funkciju na pasvordu ali to mozemo i posle
 	
+	devkey, errDev := KgsDevKeys.Check("")
+	if errDev != nil {
+		http.Error(w,"Error: Cannot register user", http.StatusInternalServerError)
+		log.Println("Error: Cannot create key for user: " + errDev.Error())
+		return 
+	}
+
 	newUser := models.User{
 		Name: 		newUserReg.Username,
 		Password:	newUserReg.Password,
 		PasteNum: 	0,
-		DevKey: 	makeDevKey(),
+		DevKey: 	devkey,
 		Email: 		newUserReg.Email,
 	}
 
@@ -88,7 +93,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 
 	w.WriteHeader(http.StatusAccepted)
-	data,_ := json.Marshal(map[string]interface{}{"Token": newToken})
+	data,_ := json.Marshal(map[string]interface{}{"Token": newToken, "DevKey": user.DevKey})
 	w.Write(data)
 
 }

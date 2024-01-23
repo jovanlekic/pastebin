@@ -4,8 +4,10 @@ import (
 	"log"
 	"net/http"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/handlers"
 	//"database/sql"
 	"pastebin/db"
+	"pastebin/kgs"
 	"context"
 	//"go.mongodb.org/mongo-driver/mongo"
 	//"os"
@@ -13,9 +15,13 @@ import (
 
 var ConnectorPostgresDB  *db.PostgresDB
 var ConnectorMongoDB  *db.MongoDB
+var KgsPasteKeys  kgs.KGS
+var KgsDevKeys kgs.KGS
 
 func StartApiServer() {
 	r := mux.NewRouter()
+
+	//corsOpts := handlers.AllowedOrigins([]string{"http://localhost:3000"}) // Set your frontend origin here
 
 	r.HandleFunc("/api/register", RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", LoginHandler).Methods("POST")
@@ -29,7 +35,11 @@ func StartApiServer() {
 	
 	log.Println("Server started on :8080")
 	http.Handle("/", r)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
+    	handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}),
+    	handlers.AllowedHeaders([]string{"X-Requested-With","Content-Type", "Authorization"}),
+		)(r))
 }
 
 
@@ -59,6 +69,29 @@ func StartApiServerAndPrepareDbConnection(){
 	// 	log.Println(err)
 	// }
 
+
+	// add KGS for pastekeys
+	postgresClientKgsPasteKey, errP := db.ConnectToPostgresDb("pastekeys", "postgres", "pass1234")
+	if errP != nil {
+		log.Println(errP)
+		return
+	}
+	// ovde treba videti gde pozvati ovo za diskonektovanje sa baze
+	defer db.DisconnectFromPostgresDb(postgresClientKgsPasteKey)
+	KgsPasteKeys = kgs.GetInstance(postgresClientKgsPasteKey)
+
+
+	// add KGS for devkeys
+	postgresClientKgsDevKey, errD := db.ConnectToPostgresDb("devkeys", "postgres", "pass1234")
+	if errD != nil {
+		log.Println(errD)
+		return
+	}
+	// ovde treba videti gde pozvati ovo za diskonektovanje sa baze
+	defer db.DisconnectFromPostgresDb(postgresClientKgsDevKey)
+	KgsDevKeys = kgs.GetInstance(postgresClientKgsDevKey)
+
+	log.Println("Uspesna konekcija ostvarena na svim bazama!")
 
 	StartApiServer();
 }

@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"pastebin/db/models"
+	"pastebin/models"
 )
 
 // CREATE

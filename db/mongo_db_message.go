@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
-	"pastebin/db/models"
+	"pastebin/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

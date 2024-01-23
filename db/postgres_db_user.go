@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"pastebin/db/models"
+	"pastebin/models"
 
 	"github.com/google/uuid"
 )

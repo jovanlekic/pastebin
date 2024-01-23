@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"pastebin/models"
 
 	_ "github.com/lib/pq"
 )
