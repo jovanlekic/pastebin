@@ -30,6 +30,8 @@ func StartApiServer() {
 	r.HandleFunc("/api/createPaste", CreatePaste).Methods("POST")
 	r.HandleFunc("/api/getPaste/{pasteKey}", GetPaste).Methods("GET")
 	r.HandleFunc("/api/deletePaste", DeletePaste).Methods("POST")
+	r.HandleFunc("/api/getUserInfo", GetUserInfo).Methods("GET")
+	r.HandleFunc("/api/getUserPastes", GetUserPastes).Methods("GET")
 
 
 	

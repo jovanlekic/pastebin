@@ -122,7 +122,7 @@ func GetPaste(w http.ResponseWriter, r *http.Request){
 	object, errObj := ConnectorPostgresDB.ReadObjectWithoutDevKey(context.Background(), pasteKey)
 	if errObj != nil {
 		http.Error(w,"Paste not found", http.StatusNotFound)
-		log.Println("Error: paste"+ pasteKey + " not found!")
+		log.Println("Error: paste "+ pasteKey + " not found!")
 		return 
 	}
 
@@ -215,7 +215,8 @@ func DeletePaste(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func getUserInfo(w http.ResponseWriter, r *http.Request){
+func GetUserInfo(w http.ResponseWriter, r *http.Request){
+	log.Println("Dosao je zahtev")
 	mapClaims, error := ParseAccesToken(r)
 	if error != nil {
 		http.Error(w,"You're Unauthorized due to invalid token", http.StatusUnauthorized)
@@ -239,6 +240,74 @@ func getUserInfo(w http.ResponseWriter, r *http.Request){
 		"email": user.Email,
 		"pastenum": user.PasteNum,
 		"devkey": user.DevKey,
+	})
+	w.Write(data)
+}
+
+func GetUserPastes(w http.ResponseWriter, r *http.Request){
+	mapClaims, error := ParseAccesToken(r)
+	if error != nil {
+		http.Error(w,"You're Unauthorized due to invalid token", http.StatusUnauthorized)
+		log.Println("Unauthorized access: Try to access " + r.URL.String())
+		return
+	}
+
+	username := mapClaims["username"].(string)
+	devkey := mapClaims["devkey"].(string)
+
+	objects, err := ConnectorPostgresDB.ReadObjectsByDevKey(context.Background(), devkey);
+	if err!=nil{
+		log.Println(err)
+		http.Error(w,"Error: User doesnt't exist", http.StatusNotFound)
+		return
+	} 
+	
+	// there is no pastes for that user
+	if len(objects) == 0 {
+		w.WriteHeader(http.StatusOK)
+		data,_:= json.Marshal(map[string]interface{}{
+			"username": username,
+			"devkey": devkey,
+			"pastes": make([]models.Paste, 0),
+		})
+		w.Write(data)
+		return
+	}
+
+	primitive_ids := make([]primitive.ObjectID, len(objects))
+	mapIDs := make(map[primitive.ObjectID]string)
+
+	for i, object := range objects {
+		messageId, errMes := primitive.ObjectIDFromHex(object.MessageID)
+		if errMes != nil {
+			http.Error(w,"Error", http.StatusInternalServerError)
+			log.Println("Error: Cannot convert from string to primitive.ObjectId")
+			return 
+		}
+		primitive_ids[i] = messageId
+		mapIDs[messageId] = object.PasteKey
+	}
+
+	messages, errMsg := ConnectorMongoDB.ReadMessages(primitive_ids);
+	if errMsg!= nil {
+		http.Error(w,"Error: Cannot retrieve pastes", http.StatusInternalServerError)
+		log.Println("Error: Cannot retrieve pastes: !")
+		return 
+	}
+
+	pastes_arr := make([]models.Paste, len(messages))
+
+	for i, msg := range messages {
+		pastes_arr[i].PasteKey = mapIDs[msg.ID]
+		pastes_arr[i].Message = msg.MessageBody
+		pastes_arr[i].DevKey = devkey
+	}
+
+	w.WriteHeader(http.StatusOK)
+	data,_ := json.Marshal(map[string]interface{}{
+		"username": username,
+		"devkey": devkey,
+		"pastes": pastes_arr,
 	})
 	w.Write(data)
 }
