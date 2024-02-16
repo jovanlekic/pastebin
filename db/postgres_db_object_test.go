@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"log"
-	"pastebin/db/models"
+	"pastebin/models"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

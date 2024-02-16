@@ -1,5 +1,8 @@
 package main
 
+
+import "pastebin/api"
+
 import (
 	"database/sql"
 	"fmt"
@@ -40,7 +43,8 @@ func main() {
 
 	// dbObj := db.NewMongoDB(mongoClient, context.Background(), "sample_joca", "novi_messages")
 
-	runMigrations()
+	//runMigrations()
+	api.StartApiServerAndPrepareDbConnection();
 
 	// postgresClient, err := db.ConnectToPostgresDb("", "", "")
 	// if err != nil {
@@ -146,4 +150,5 @@ func main() {
 	// 	panic(err)
 	// }
 	// fmt.Printf("%s\n", jsonData) // ispis u json-u
+
 }

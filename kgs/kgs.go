@@ -6,7 +6,6 @@ import (
 	"pastebin/db"
 )
 
-// Singleton pattern
 
 type KGS interface {
 	Check(key string) (string, error)
@@ -17,10 +16,9 @@ type kgs struct {
 	db  *db.PostgresDB
 }
 
-var instance *kgs
 
 func initKgs(db *db.PostgresDB) error {
-	doneMigration, err := db.CheckMigration(context.Background(), "FillUnusedTable")
+	doneMigration, err := db.CheckMigration(context.Background(), "FillKeysTable")
 	if err != nil {
 		return err
 	}
@@ -34,12 +32,12 @@ func initKgs(db *db.PostgresDB) error {
 }
 
 func GetInstance(conn *sql.DB) *kgs {
-	if instance == nil {
-		instance = new(kgs)
-		instance.ctx = context.Background()
-		instance.db = db.NewPostgresDB(conn)
-		initKgs(instance.db)
-	}
+	var instance *kgs
+	instance = new(kgs)
+	instance.ctx = context.Background()
+	instance.db = db.NewPostgresDB(conn)
+	initKgs(instance.db)
+	
 	return instance
 }
 
