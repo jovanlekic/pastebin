@@ -3,8 +3,13 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+	_ "github.com/mattes/migrate/source/file"
 )
 
 type PostgresDB struct {
@@ -18,7 +23,7 @@ func NewPostgresDB(db *sql.DB) (dbObj *PostgresDB) {
 }
 
 func ConnectToPostgresDb(dbName, user, password string) (*sql.DB, error) {
-	connStr := fmt.Sprintf("user=%s password=%s host=localhost port=5432 dbname=%s sslmode=disable", user, password, dbName)
+	connStr := fmt.Sprintf("user=%s password=%s host=db port=5432 dbname=%s sslmode=disable", user, password, dbName)
 
 	dbo, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -30,7 +35,25 @@ func ConnectToPostgresDb(dbName, user, password string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	fmt.Println("Successfully connected to Postgres!")
+	fmt.Println("Successfully connected to Postgres!->", dbName)
+
+	driver, err := postgres.WithInstance(dbo, &postgres.Config{
+		DatabaseName: dbName,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations",
+		"postgres", driver)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
+		log.Println(err)
+	}
+	fmt.Println("Success migration!")
+
 	return dbo, nil
 }
 

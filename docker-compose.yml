@@ -1,0 +1,34 @@
+version: '3.7'
+services:
+  db:
+    image: postgres:latest
+    container_name: mydb-container
+    environment:
+      POSTGRES_DB: mydb2
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass1234
+    ports:
+      - '5433:5432'
+    volumes:
+      - ./db/db-init-scripts:/docker-entrypoint-initdb.d
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-container
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+    ports:
+      - '27017:27017'
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+  myapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myapp-container
+    ports:
+      - '8080:8080'
+    depends_on:
+      - db
+      - mongodb
+  

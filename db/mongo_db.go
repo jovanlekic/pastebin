@@ -20,10 +20,10 @@ type MongoDB struct {
 	db        *mongo.Collection
 }
 
-const projName = "pastebin"
+const wrkDir = "app"
 
 func ConnectToMongoDb(ctx context.Context) (*mongo.Client, error) {
-	re := regexp.MustCompile(`^(.*` + projName + `)`)
+	re := regexp.MustCompile(`^(.*` + wrkDir + `)`)
 	cwd, _ := os.Getwd()
 	rootPath := re.Find([]byte(cwd))
 
